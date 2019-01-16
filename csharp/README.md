@@ -41,6 +41,12 @@ in its implementation, as well as the new Visual Studio 2017 csproj
 format. These features have no impact when using the compiled code - 
 they're only relevant when building the `Google.Protobuf` assembly.
 
+In order to run and debug the AddressBook example in the IDE, you must
+install the optional component, ".Net Core 1.0 - 1.1 development tools
+for Web" (as it's labelled in current versions of the VS2017
+installer), above and beyond the main .NET Core cross-platform
+development feature.
+
 Testing
 =======
 
@@ -71,7 +77,7 @@ History of C# protobufs
 This subtree was originally imported from https://github.com/jskeet/protobuf-csharp-port
 and represents the latest development version of C# protobufs, that will now be developed
 and maintained by Google. All the development will be done in open, under this repository
-(https://github.com/google/protobuf).
+(https://github.com/protocolbuffers/protobuf).
 
 The previous project differs from this project in a number of ways:
 

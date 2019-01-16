@@ -54,6 +54,7 @@
 #include <google/protobuf/dynamic_message.h>
 #include <google/protobuf/stubs/strutil.h>
 
+
 namespace google {
 namespace protobuf {
 namespace compiler {
@@ -172,10 +173,10 @@ void MaybeRestartJavaMethod(io::Printer* printer,
 
   if ((*bytecode_estimate) > bytesPerMethod) {
     ++(*method_num);
-    printer->Print(chain_statement, "method_num", SimpleItoa(*method_num));
+    printer->Print(chain_statement, "method_num", StrCat(*method_num));
     printer->Outdent();
     printer->Print("}\n");
-    printer->Print(method_decl, "method_num", SimpleItoa(*method_num));
+    printer->Print(method_decl, "method_num", StrCat(*method_num));
     printer->Indent();
     *bytecode_estimate = 0;
   }
@@ -222,6 +223,18 @@ bool FileGenerator::Validate(string* error) {
       "Please either rename the type or use the java_outer_classname "
       "option to specify a different outer class name for the .proto file.");
     return false;
+  }
+  // Print a warning if optimize_for = LITE_RUNTIME is used.
+  if (file_->options().optimize_for() == FileOptions::LITE_RUNTIME) {
+    GOOGLE_LOG(WARNING)
+        << "The optimize_for = LITE_RUNTIME option is no longer supported by "
+        << "protobuf Java code generator and may generate broken code. It "
+        << "will be ignored by protoc in the future and protoc will always "
+        << "generate full runtime code for Java. To use Java Lite runtime, "
+        << "users should use the Java Lite plugin instead. See:\n"
+        << "  "
+           "https://github.com/protocolbuffers/protobuf/blob/master/java/"
+           "lite.md";
   }
   return true;
 }
@@ -535,11 +548,11 @@ void FileGenerator::GenerateDescriptorInitializationCodeForMutable(io::Printer* 
             "      $scope$.getExtensions().get($index$),\n"
             "      (com.google.protobuf.Message) defaultExtensionInstance);\n"
             "}\n",
-            "scope", scope, "index", SimpleItoa(field->index()), "class",
+            "scope", scope, "index", StrCat(field->index()), "class",
             name_resolver_->GetImmutableClassName(field->message_type()));
       } else {
         printer->Print("registry.add($scope$.getExtensions().get($index$));\n",
-                       "scope", scope, "index", SimpleItoa(field->index()));
+                       "scope", scope, "index", StrCat(field->index()));
       }
     }
     printer->Print(

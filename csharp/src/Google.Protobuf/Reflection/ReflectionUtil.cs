@@ -34,10 +34,6 @@ using Google.Protobuf.Compatibility;
 using System;
 using System.Reflection;
 
-#if NET35
-using Google.Protobuf.Compatibility;
-#endif
-
 namespace Google.Protobuf.Reflection
 {
     /// <summary>
@@ -50,6 +46,29 @@ namespace Google.Protobuf.Reflection
     /// </summary>
     internal static class ReflectionUtil
     {
+        static ReflectionUtil()
+        {
+            ForceInitialize<string>(); // Handles all reference types
+            ForceInitialize<int>();
+            ForceInitialize<long>();
+            ForceInitialize<uint>();
+            ForceInitialize<ulong>();
+            ForceInitialize<float>();
+            ForceInitialize<double>();
+            ForceInitialize<bool>();
+            ForceInitialize<int?>();
+            ForceInitialize<long?>();
+            ForceInitialize<uint?>();
+            ForceInitialize<ulong?>();
+            ForceInitialize<float?>();
+            ForceInitialize<double?>();
+            ForceInitialize<bool?>();
+            ForceInitialize<SampleEnum>();
+            SampleEnumMethod();
+        }
+
+        internal static void ForceInitialize<T>() => new ReflectionHelper<IMessage, T>();
+
         /// <summary>
         /// Empty Type[] used when calling GetProperty to force property instead of indexer fetching.
         /// </summary>
@@ -93,6 +112,9 @@ namespace Google.Protobuf.Reflection
         internal static Action<IMessage> CreateActionIMessage(MethodInfo method) =>
             GetReflectionHelper(method.DeclaringType, typeof(object)).CreateActionIMessage(method);
 
+        internal static Func<IMessage, bool> CreateFuncIMessageBool(MethodInfo method) =>
+            GetReflectionHelper(method.DeclaringType, method.ReturnType).CreateFuncIMessageBool(method);
+
         /// <summary>
         /// Creates a reflection helper for the given type arguments. Currently these are created on demand
         /// rather than cached; this will be "busy" when initially loading a message's descriptor, but after that
@@ -110,6 +132,7 @@ namespace Google.Protobuf.Reflection
             Action<IMessage> CreateActionIMessage(MethodInfo method);
             Func<IMessage, object> CreateFuncIMessageObject(MethodInfo method);
             Action<IMessage, object> CreateActionIMessageObject(MethodInfo method);
+            Func<IMessage, bool> CreateFuncIMessageBool(MethodInfo method);
         }
 
         private class ReflectionHelper<T1, T2> : IReflectionHelper
@@ -151,6 +174,12 @@ namespace Google.Protobuf.Reflection
                 var del = (Action<T1, T2>) method.CreateDelegate(typeof(Action<T1, T2>));
                 return (message, arg) => del((T1) message, (T2) arg);
             }
+
+            public Func<IMessage, bool> CreateFuncIMessageBool(MethodInfo method)
+            {
+                var del = (Func<T1, bool>)method.CreateDelegate(typeof(Func<T1, bool>));
+                return message => del((T1)message);
+            }
         }
 
         // Runtime compatibility checking code - see ReflectionHelper<T1, T2>.CreateFuncIMessageInt32 for
@@ -163,7 +192,6 @@ namespace Google.Protobuf.Reflection
         {
             try
             {
-                PreventLinkerFailures();
                 // Try to do the conversion using reflection, so we can see whether it's supported.
                 MethodInfo method = typeof(ReflectionUtil).GetMethod(nameof(SampleEnumMethod));
                 // If this passes, we're in a reasonable runtime.
@@ -174,23 +202,6 @@ namespace Google.Protobuf.Reflection
             {
                 return false;
             }
-        }
-
-        /// <summary>
-        /// This method is effectively pointless, but only called once. It's present (and called)
-        /// to avoid the Unity linker from removing code that's only called via reflection.
-        /// </summary>
-        private static void PreventLinkerFailures()
-        {
-            // Exercise the method directly. This should avoid any pro-active linkers from stripping
-            // the method out.
-            SampleEnum x = SampleEnumMethod();
-            if (x != SampleEnum.X)
-            {
-                throw new InvalidOperationException("Failure in reflection utilities");
-            }
-            // Make sure the ReflectionHelper parameterless constructor isn't removed...
-            var helper = new ReflectionHelper<int, int>();
         }
 
         public enum SampleEnum
